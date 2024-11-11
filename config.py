@@ -1,0 +1,1 @@
+DATA_PATH = "D:\Download\ModelNet10"

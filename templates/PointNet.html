@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<head>
+	<meta charset="utf-8">
+	<title>3D Point Cloud Visualization</title>
+	<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/echarts-gl@2/dist/echarts-gl.min.js"></script>
+	<style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            height: 90vh;
+        }
+
+        .controls {
+            width: 300px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .visualization {
+            flex-grow: 1;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #eb6f6f;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: rgba(238, 172, 172, 0.82);
+        }
+
+        #main {
+            width: 100%;
+            height: 100%;
+        }
+
+        #status {
+            margin-top: 10px;
+            color: #666;
+        }
+	</style>
+</head>
+<body>
+<div class="container">
+	<div class="controls">
+		<h2>PointNet processed point cloud image</h2>
+		<select id="categorySelect">
+			<option value="">Select Category</option>
+		</select>
+		<select id="fileSelect">
+			<option value="">Select File</option>
+		</select>
+		<select id="modelSelect">
+			<option value="model1">Original PointNet</option>
+			<option value="model2">Enhanced PointNet</option>
+		</select>
+		<button onclick="ProcessingIt()">Processing It!</button>
+		<button onclick="window.location.href='/'" style="margin-top: 5px">Return to Original Point Cloud!</button>
+		<div id="status"></div>
+	</div>
+	<div class="visualization">
+		<div id="main"></div>
+	</div>
+</div>
+
+<script>
+    var chartDom = document.getElementById('main');
+    var myChart = echarts.init(chartDom);
+    var option;
+
+    function initChart(data, bounds) {
+        // 为确保显示完整，slightly扩大显示范围
+        const range = {
+            x: [bounds.min[0].toFixed(2) * 2, bounds.max[0].toFixed(2) * 2],
+            y: [bounds.min[1].toFixed(2) * 2, bounds.max[1].toFixed(2) * 2],
+            z: [bounds.min[2].toFixed(2) * 2, bounds.max[2].toFixed(2) * 2]
+        };
+
+        option = {
+            tooltip: {
+                formatter: function (params) {
+                    return `(${params.data[0].toFixed(3)}, ${params.data[1].toFixed(3)}, ${params.data[2].toFixed(3)})`;
+                },
+	            extraCssText: 'width: 200px; height: 50px; max-width: 300px;'
+            },
+            grid3D: {
+                boxWidth: 100,
+                boxHeight: 100,
+                boxDepth: 100,
+                viewControl: {
+                    distance: 120,
+                    alpha: 20,
+                    beta: 40
+                }
+            },
+            xAxis3D: {
+                min: -1,
+                max: 1,
+                minInterval: 0.2
+            },
+            yAxis3D: {
+                min: -1,
+                max: 1,
+                minInterval: 0.2
+            },
+            zAxis3D: {
+                min: -1,
+                max: 1,
+                minInterval: 0.2
+            },
+            series: [{
+                type: 'scatter3D',
+                data: data,
+                symbolSize: 3,
+                itemStyle: {
+                    color: '#e89494',
+                    opacity: 1
+                },
+                emphasis: {
+                    itemStyle: {
+                        color: '#f00'
+                    }
+                }
+            }]
+        };
+        return option;
+    }
+
+    // 加载类别列表
+    fetch('/get_available_files')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const categorySelect = document.getElementById('categorySelect');
+                data.categories.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category;
+                    option.textContent = category;
+                    categorySelect.appendChild(option);
+                });
+                window.filesByCategory = data.files;
+            }
+        });
+
+    // 类别选择变化时更新文件列表
+    document.getElementById('categorySelect').addEventListener('change', function (e) {
+        const category = e.target.value;
+        const fileSelect = document.getElementById('fileSelect');
+        fileSelect.innerHTML = '<option value="">Select File</option>';
+
+        if (category && window.filesByCategory && window.filesByCategory[category]) {
+            window.filesByCategory[category].forEach(file => {
+                const option = document.createElement('option');
+                option.value = file;
+                option.textContent = file;
+                fileSelect.appendChild(option);
+            });
+        }
+    });
+
+    function ProcessingIt() {
+        const category = document.getElementById('categorySelect').value;
+        const filename = document.getElementById('fileSelect').value;
+        const model = document.getElementById('modelSelect').value;
+        const status = document.getElementById('status');
+
+        if (!category || !filename) {
+            status.textContent = 'Please select both category and file';
+            return;
+        }
+
+        status.textContent = 'Loading...';
+
+        fetch(`/predict_model/${category}/${filename}/${model}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    console.log(`Loading ${data.points.length} points`);
+                    const chartOption = initChart(data.points, data.bounds);
+                    myChart.setOption(chartOption, true);
+                    status.textContent = `Loaded ${data.points.length} points`;
+                } else {
+                    status.textContent = 'Error: ' + data.message;
+                }
+            })
+            .catch(error => {
+                status.textContent = 'Error: ' + error;
+                console.error('Error:', error);
+            });
+    }
+
+    // 响应窗口大小变化
+    window.addEventListener('resize', function () {
+        myChart.resize();
+    });
+</script>
+</body>
+</html>
