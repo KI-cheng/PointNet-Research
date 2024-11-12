@@ -4,4 +4,9 @@ A group project exploring PointNet and data enhancement methods.
 team members:
 Zhong Cheng(Leaders),Cheng Zhenkai,Yang Chuang,Xu Xin.
 
-没有导入数据集文件（太大上传不了）
+Please change the DATA_PATH in the config.py to import dataset.
+
+visualization display as follow:
+![page1.gif](GIF%2Fpage1.gif)
+![page2.gif](GIF%2Fpage2.gif)
+![page3.gif](GIF%2Fpage3.gif)
