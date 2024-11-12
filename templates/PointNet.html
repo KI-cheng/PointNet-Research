@@ -204,7 +204,7 @@
                     console.log(`Loading ${data.points.length} points`);
                     const chartOption = initChart(data.points, data.bounds);
                     myChart.setOption(chartOption, true);
-                    status.textContent = `Loaded ${data.points.length} points`;
+                    status.textContent = `Classes is ${data.classes}(${data.points.length} points)`;
                 } else {
                     status.textContent = 'Error: ' + data.message;
                 }

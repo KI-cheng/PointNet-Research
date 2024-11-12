@@ -147,6 +147,7 @@ def predict_with_model(category, filename, model):
         return jsonify({
             'status': 'success',
             'points': points.tolist(),
+            'classes': str(predicted_class['predicted_class']),
             'bounds': {
                 'min': min_vals,
                 'max': max_vals
